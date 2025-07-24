@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Settings, Save, Moon, Sun, Plus, Trash2, Phone, Mail, User } from 'lucide-react';
+import { Settings, Save, Moon, Sun, Plus, Trash2, Phone, Mail, User, Volume2 } from 'lucide-react';
+import { audioService } from '../services/AudioService';
 
 interface EmergencyContact {
   id: string;
@@ -307,6 +308,35 @@ export const DeviceSettings = ({
               </div>
             </div>
           )}
+        </div>
+
+        {/* Voice Announcement Testing */}
+        <div className="mb-6 pt-6 border-t border-gray-200">
+          <h3 className="text-sm font-medium text-gray-700 mb-3 flex items-center">
+            <Volume2 size={16} className="mr-2" />
+            Voice Announcements
+          </h3>
+          <div className="flex items-center space-x-4">
+            <button
+              type="button"
+              onClick={() => audioService.playConnectionAnnouncement()}
+              className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+            >
+              <Volume2 size={14} className="mr-2" />
+              Test "Respira here, Active"
+            </button>
+            <button
+              type="button"
+              onClick={() => audioService.speakText("Emergency alert activated. Please check your condition immediately.")}
+              className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+            >
+              <Volume2 size={14} className="mr-2" />
+              Test Emergency Voice
+            </button>
+          </div>
+          <p className="text-xs text-gray-500 mt-2">
+            Test voice announcements to ensure audio is working properly. The system will automatically announce "Respira here, Active" 10 seconds after connecting.
+          </p>
         </div>
 
         <div className="flex justify-end">

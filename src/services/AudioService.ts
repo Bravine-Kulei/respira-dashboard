@@ -122,6 +122,63 @@ export class AudioService {
   }
 
   /**
+   * Speak text using Web Speech API
+   */
+  public speakText(text: string, options?: {
+    rate?: number;
+    pitch?: number;
+    volume?: number;
+    voice?: string;
+  }): void {
+    if ('speechSynthesis' in window) {
+      // Cancel any ongoing speech
+      window.speechSynthesis.cancel();
+
+      const utterance = new SpeechSynthesisUtterance(text);
+
+      // Set voice properties
+      utterance.rate = options?.rate || 1.0;
+      utterance.pitch = options?.pitch || 1.0;
+      utterance.volume = options?.volume || 0.8;
+
+      // Try to find a specific voice if requested
+      if (options?.voice) {
+        const voices = window.speechSynthesis.getVoices();
+        const selectedVoice = voices.find(voice =>
+          voice.name.toLowerCase().includes(options.voice!.toLowerCase()) ||
+          voice.lang.toLowerCase().includes(options.voice!.toLowerCase())
+        );
+        if (selectedVoice) {
+          utterance.voice = selectedVoice;
+        }
+      }
+
+      // Speak the text
+      window.speechSynthesis.speak(utterance);
+    } else {
+      console.warn('Speech synthesis not supported in this browser');
+    }
+  }
+
+  /**
+   * Play connection announcement
+   */
+  public playConnectionAnnouncement(): void {
+    // Play a pleasant connection sound first
+    this.playSuccessSound();
+
+    // Then speak the announcement after a short delay
+    setTimeout(() => {
+      this.speakText("Respira here, Active", {
+        rate: 0.9,
+        pitch: 1.1,
+        volume: 0.7,
+        voice: 'female' // Prefer female voice if available
+      });
+    }, 1000); // 1 second delay after the success sound
+  }
+
+  /**
    * Check if alarm is currently playing
    */
   public isAlarmPlaying(): boolean {

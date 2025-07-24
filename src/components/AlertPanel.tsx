@@ -89,6 +89,20 @@ export const AlertPanel = ({
       location: 'Unknown', // Could be enhanced with geolocation
     };
 
+    // Voice announcement for emergency
+    const emergencyMessage = liveData.fallDetected
+      ? "Emergency alert! Fall detected. Emergency contacts have been notified."
+      : "Emergency alert! Critical health condition detected. Emergency contacts have been notified.";
+
+    // Speak emergency alert after a short delay (let alarm play first)
+    setTimeout(() => {
+      audioService.speakText(emergencyMessage, {
+        rate: 1.1,
+        pitch: 1.2,
+        volume: 0.9
+      });
+    }, 2000);
+
     // Send alerts to emergency contacts
     if (emergencyContacts.length > 0) {
       await sendEmergencyNotifications(alertData);

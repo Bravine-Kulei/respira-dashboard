@@ -5,6 +5,7 @@ import { AlertPanel } from './components/AlertPanel';
 import { LogsHistory } from './components/LogsHistory';
 import { DeviceSettings } from './components/DeviceSettings';
 import { HelpSection } from './components/HelpSection';
+import { audioService } from './services/AudioService';
 // Helper function to generate random value within range
 const randomInRange = (base: number, range: number) => {
   return Math.max(0, Math.round(base + Math.random() * range * 2 - range));
@@ -30,6 +31,9 @@ export function App() {
     y: 0,
     z: 9.8 // Normal gravity
   });
+
+  // Voice announcement state
+  const [voiceAnnouncementCountdown, setVoiceAnnouncementCountdown] = useState<number | null>(null);
   // State for historical data logs
   const [dataLogs, setDataLogs] = useState<Array<{
     time: string;
@@ -91,6 +95,7 @@ export function App() {
       setUsageCount(0);
       setInhalerBattery(85);
       setWearableBattery(62);
+
       // Initial log entry
       const now = new Date();
       const formattedTime = now.toLocaleTimeString([], {
@@ -103,6 +108,33 @@ export function App() {
         airQuality: 92,
         usage: 0
       }]);
+
+      // Voice announcement countdown and timer
+      setVoiceAnnouncementCountdown(10);
+
+      // Countdown timer
+      const countdownInterval = setInterval(() => {
+        setVoiceAnnouncementCountdown(prev => {
+          if (prev === null || prev <= 1) {
+            clearInterval(countdownInterval);
+            return null;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      // Voice announcement after 10 seconds
+      const announcementTimer = setTimeout(() => {
+        audioService.playConnectionAnnouncement();
+        setVoiceAnnouncementCountdown(null);
+      }, 10000);
+
+      // Cleanup timers if component unmounts or disconnects
+      return () => {
+        clearTimeout(announcementTimer);
+        clearInterval(countdownInterval);
+        setVoiceAnnouncementCountdown(null);
+      };
     } else {
       // Reset values when disconnected
       setHeartRate(null);
@@ -430,6 +462,15 @@ export function App() {
                 <div>Last synced: {lastSyncTime || 'Never'}</div>
               </div>
             )}
+
+            {/* Voice Announcement Countdown */}
+            {voiceAnnouncementCountdown !== null && (
+              <div className="flex items-center space-x-2 text-sm bg-blue-50 text-blue-700 px-3 py-1 rounded-full border border-blue-200">
+                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                <span>Voice announcement in {voiceAnnouncementCountdown}s</span>
+              </div>
+            )}
+
             {/* Test Fall Detection Button (Demo) */}
             {isConnected && (
               <button

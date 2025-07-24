@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Bluetooth, Activity, Heart, Wind, Settings } from 'lucide-react';
+import { X, Bluetooth, Activity, Heart, Wind, Settings, Volume2 } from 'lucide-react';
 interface HelpSectionProps {
   onClose: () => void;
 }
@@ -85,6 +85,26 @@ export const HelpSection = ({
             notification preferences, and display options. You can export your
             data logs as CSV files for sharing with healthcare providers.
           </p>
+        </div>
+        <div>
+          <h3 className="text-lg font-medium text-gray-700 mb-2 flex items-center">
+            <Volume2 className="text-blue-500 mr-2" size={18} />
+            Voice Announcements
+          </h3>
+          <ul className="list-disc list-inside space-y-2 text-gray-600">
+            <li>
+              <strong>Connection Confirmation:</strong> The system will announce "Respira here, Active" 10 seconds after connecting your device
+            </li>
+            <li>
+              <strong>Emergency Alerts:</strong> Voice announcements accompany critical alerts and fall detection
+            </li>
+            <li>
+              <strong>Testing:</strong> Use Device Settings to test voice announcements and ensure audio is working
+            </li>
+            <li>
+              <strong>Browser Permissions:</strong> Allow audio permissions when prompted for voice features to work
+            </li>
+          </ul>
         </div>
       </div>
       <div className="mt-6 pt-4 border-t border-gray-200">
