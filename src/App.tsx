@@ -2,10 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { Header } from './components/Header';
 import { LiveDataSection } from './components/LiveDataSection';
 import { AlertPanel } from './components/AlertPanel';
+import { AIPredictionPanel } from './components/AIPredictionPanel';
 import { LogsHistory } from './components/LogsHistory';
 import { DeviceSettings } from './components/DeviceSettings';
 import { HelpSection } from './components/HelpSection';
 import { audioService } from './services/AudioService';
+import { aiHealthPredictor, HealthPrediction, HealthData } from './services/AIHealthPredictor';
 // Helper function to generate random value within range
 const randomInRange = (base: number, range: number) => {
   return Math.max(0, Math.round(base + Math.random() * range * 2 - range));
@@ -34,6 +36,24 @@ export function App() {
 
   // Voice announcement state
   const [voiceAnnouncementCountdown, setVoiceAnnouncementCountdown] = useState<number | null>(null);
+
+  // AI Prediction state
+  const [aiPrediction, setAiPrediction] = useState<HealthPrediction>({
+    riskLevel: 'low',
+    prediction: 'Initializing AI health monitoring system...',
+    confidence: 60,
+    timeframe: 'Next 2-4 hours',
+    recommendations: ['Connect device to begin AI analysis'],
+    triggers: [],
+    riskScore: 20,
+    nextUpdate: Date.now() + (5 * 60 * 1000)
+  });
+  const [showAIPrediction, setShowAIPrediction] = useState(true);
+  const [predictionHistory, setPredictionHistory] = useState<Array<{
+    timestamp: number;
+    riskScore: number;
+    riskLevel: string;
+  }>>([]);
   // State for historical data logs
   const [dataLogs, setDataLogs] = useState<Array<{
     time: string;
@@ -144,7 +164,7 @@ export function App() {
       setWearableBattery(null);
     }
   }, [isConnected]);
-  // Simulate heart rate changes
+  // Simulate heart rate changes and feed AI
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | null = null;
     if (isConnected && heartRate !== null) {
@@ -152,14 +172,29 @@ export function App() {
         setHeartRate(prev => {
           if (prev === null) return null;
           // Simulate natural heart rate variations
-          return randomInRange(prev, 3);
+          const newHeartRate = randomInRange(prev, 3);
+
+          // Feed data to AI predictor when we have all required data
+          if (airQuality !== null && usageCount !== null) {
+            const healthData: HealthData = {
+              timestamp: Date.now(),
+              heartRate: newHeartRate,
+              airQuality,
+              usageCount,
+              accelerometerData
+            };
+
+            aiHealthPredictor.addDataPoint(healthData);
+          }
+
+          return newHeartRate;
         });
       }, 3000); // Update every 3 seconds
     }
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isConnected, heartRate]);
+  }, [isConnected, heartRate, airQuality, usageCount, accelerometerData]);
   // Simulate air quality changes
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | null = null;
@@ -306,12 +341,83 @@ export function App() {
     }, 10000);
   };
 
-  // Determine alert status based on thresholds
+  // AI Prediction Updates
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval> | null = null;
+
+    if (isConnected && heartRate !== null && airQuality !== null && usageCount !== null) {
+      // Generate initial prediction
+      const currentData: HealthData = {
+        timestamp: Date.now(),
+        heartRate,
+        airQuality,
+        usageCount,
+        accelerometerData
+      };
+
+      const prediction = aiHealthPredictor.generatePrediction(currentData);
+      setAiPrediction(prediction);
+
+      // Update prediction history
+      setPredictionHistory(prev => {
+        const newEntry = {
+          timestamp: Date.now(),
+          riskScore: prediction.riskScore,
+          riskLevel: prediction.riskLevel
+        };
+        const updated = [...prev, newEntry];
+        // Keep only last 24 entries (24 hours if updated hourly)
+        return updated.slice(-24);
+      });
+
+      // Set up regular prediction updates every 5 minutes
+      interval = setInterval(() => {
+        const currentData: HealthData = {
+          timestamp: Date.now(),
+          heartRate: heartRate || 0,
+          airQuality: airQuality || 0,
+          usageCount: usageCount || 0,
+          accelerometerData
+        };
+
+        const newPrediction = aiHealthPredictor.generatePrediction(currentData);
+        setAiPrediction(newPrediction);
+
+        // Update prediction history
+        setPredictionHistory(prev => {
+          const newEntry = {
+            timestamp: Date.now(),
+            riskScore: newPrediction.riskScore,
+            riskLevel: newPrediction.riskLevel
+          };
+          const updated = [...prev, newEntry];
+          return updated.slice(-24);
+        });
+
+        // Voice announcement for high-risk predictions
+        if (newPrediction.riskLevel === 'high' || newPrediction.riskLevel === 'critical') {
+          audioService.speakText(
+            `AI health alert: ${newPrediction.prediction.split('.')[0]}. Please check your recommendations.`,
+            { rate: 1.0, pitch: 1.1, volume: 0.8 }
+          );
+        }
+      }, 5 * 60 * 1000); // Every 5 minutes
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isConnected, heartRate, airQuality, usageCount, accelerometerData]);
+
+  // Determine alert status based on thresholds and AI predictions
   const determineAlertStatus = (): 'normal' | 'warning' | 'critical' | 'emergency' => {
     if (!isConnected) return 'warning';
 
     // Emergency status for fall detection
     if (fallDetected) return 'emergency';
+
+    // Emergency status for AI critical predictions
+    if (aiPrediction.riskLevel === 'critical') return 'emergency';
 
     // Emergency status for severe health issues
     if (heartRate && heartRate > thresholds.heartRateThreshold + 20) {
@@ -321,7 +427,8 @@ export function App() {
       return 'emergency';
     }
 
-    // Critical status for threshold breaches
+    // Critical status for AI high risk or threshold breaches
+    if (aiPrediction.riskLevel === 'high') return 'critical';
     if (heartRate && heartRate > thresholds.heartRateThreshold) {
       return 'critical';
     }
@@ -448,6 +555,14 @@ export function App() {
       <main className="container mx-auto px-4 py-6">
         {showHelp && <HelpSection onClose={() => setShowHelp(false)} />}
         <LiveDataSection data={liveData} />
+        {/* AI Prediction Panel */}
+        <AIPredictionPanel
+          prediction={aiPrediction}
+          isVisible={showAIPrediction}
+          onToggleVisibility={() => setShowAIPrediction(!showAIPrediction)}
+          predictionHistory={predictionHistory}
+        />
+
         <AlertPanel
           status={alertStatus}
           thresholds={thresholds}

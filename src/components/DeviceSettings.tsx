@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Settings, Save, Moon, Sun, Plus, Trash2, Phone, Mail, User, Volume2 } from 'lucide-react';
+import { Settings, Save, Moon, Sun, Plus, Trash2, Phone, Mail, User, Volume2, Brain, Activity } from 'lucide-react';
 import { audioService } from '../services/AudioService';
+import { aiHealthPredictor } from '../services/AIHealthPredictor';
 
 interface EmergencyContact {
   id: string;
@@ -308,6 +309,50 @@ export const DeviceSettings = ({
               </div>
             </div>
           )}
+        </div>
+
+        {/* AI System Testing */}
+        <div className="mb-6 pt-6 border-t border-gray-200">
+          <h3 className="text-sm font-medium text-gray-700 mb-3 flex items-center">
+            <Brain size={16} className="mr-2" />
+            AI Health Prediction System
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+            <button
+              type="button"
+              onClick={() => {
+                const stats = aiHealthPredictor.getModelStats();
+                alert(`AI Model Statistics:\nAccuracy: ${stats.accuracy}%\nTotal Predictions: ${stats.totalPredictions}\nConfidence: ${stats.confidence}%`);
+              }}
+              className="inline-flex items-center px-3 py-2 border border-blue-300 text-sm font-medium rounded-md text-blue-700 bg-blue-50 hover:bg-blue-100"
+            >
+              <Activity size={14} className="mr-2" />
+              View AI Model Stats
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                // Simulate high-risk scenario for testing
+                const testData = {
+                  timestamp: Date.now(),
+                  heartRate: 120, // High heart rate
+                  airQuality: 45, // Poor air quality
+                  usageCount: 3,  // Increased usage
+                  accelerometerData: { x: 2, y: 1, z: 8 }
+                };
+                aiHealthPredictor.addDataPoint(testData);
+                const prediction = aiHealthPredictor.generatePrediction(testData);
+                audioService.speakText(`AI test prediction: ${prediction.prediction.split('.')[0]}`);
+              }}
+              className="inline-flex items-center px-3 py-2 border border-orange-300 text-sm font-medium rounded-md text-orange-700 bg-orange-50 hover:bg-orange-100"
+            >
+              <Brain size={14} className="mr-2" />
+              Test High-Risk Scenario
+            </button>
+          </div>
+          <p className="text-xs text-gray-500 mb-4">
+            The AI system continuously analyzes your health patterns to predict potential issues before they become emergencies. Test the system to ensure it's working properly.
+          </p>
         </div>
 
         {/* Voice Announcement Testing */}

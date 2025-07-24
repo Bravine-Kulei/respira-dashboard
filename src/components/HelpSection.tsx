@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Bluetooth, Activity, Heart, Wind, Settings, Volume2 } from 'lucide-react';
+import { X, Bluetooth, Activity, Heart, Wind, Settings, Volume2, Brain } from 'lucide-react';
 interface HelpSectionProps {
   onClose: () => void;
 }
@@ -88,6 +88,29 @@ export const HelpSection = ({
         </div>
         <div>
           <h3 className="text-lg font-medium text-gray-700 mb-2 flex items-center">
+            <Brain className="text-purple-500 mr-2" size={18} />
+            AI Health Prediction System
+          </h3>
+          <ul className="list-disc list-inside space-y-2 text-gray-600">
+            <li>
+              <strong>Predictive Analytics:</strong> AI analyzes your health patterns to predict potential issues 30 minutes to 6 hours in advance
+            </li>
+            <li>
+              <strong>Risk Assessment:</strong> Continuous monitoring with risk levels: Low, Medium, High, and Critical
+            </li>
+            <li>
+              <strong>Smart Recommendations:</strong> Personalized suggestions based on your current health status and environmental factors
+            </li>
+            <li>
+              <strong>Pattern Recognition:</strong> Learns from your data to improve prediction accuracy over time
+            </li>
+            <li>
+              <strong>Proactive Alerts:</strong> Voice and visual notifications for high-risk predictions
+            </li>
+          </ul>
+        </div>
+        <div>
+          <h3 className="text-lg font-medium text-gray-700 mb-2 flex items-center">
             <Volume2 className="text-blue-500 mr-2" size={18} />
             Voice Announcements
           </h3>
@@ -97,6 +120,9 @@ export const HelpSection = ({
             </li>
             <li>
               <strong>Emergency Alerts:</strong> Voice announcements accompany critical alerts and fall detection
+            </li>
+            <li>
+              <strong>AI Predictions:</strong> Voice alerts for high-risk health predictions
             </li>
             <li>
               <strong>Testing:</strong> Use Device Settings to test voice announcements and ensure audio is working
