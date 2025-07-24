@@ -10,6 +10,12 @@ interface LiveDataProps {
     connectionStatus: string;
     inhalerBattery: number | null;
     wearableBattery: number | null;
+    fallDetected?: boolean;
+    accelerometerData?: {
+      x: number;
+      y: number;
+      z: number;
+    };
   };
 }
 
@@ -147,6 +153,101 @@ export const LiveDataSection = ({ data }: LiveDataProps) => {
                   ></div>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Accelerometer Data Section */}
+      {data.connectionStatus === 'Connected' && data.accelerometerData && (
+        <div className="bg-white rounded-lg shadow-md p-4 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-medium text-gray-800 flex items-center">
+              <Activity className="text-purple-500 mr-2" size={20} />
+              Motion Sensor (MPU6050)
+            </h3>
+            {data.fallDetected && (
+              <span className="bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded animate-pulse">
+                FALL DETECTED
+              </span>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* X-Axis */}
+            <div className="text-center">
+              <div className="text-sm text-gray-500 mb-1">X-Axis</div>
+              <div className="text-xl font-bold text-blue-600">
+                {data.accelerometerData.x.toFixed(2)}g
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                <div
+                  className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                  style={{
+                    width: `${Math.min(100, Math.abs(data.accelerometerData.x) * 10)}%`,
+                    marginLeft: data.accelerometerData.x < 0 ? `${100 - Math.min(100, Math.abs(data.accelerometerData.x) * 10)}%` : '0'
+                  }}
+                ></div>
+              </div>
+            </div>
+
+            {/* Y-Axis */}
+            <div className="text-center">
+              <div className="text-sm text-gray-500 mb-1">Y-Axis</div>
+              <div className="text-xl font-bold text-green-600">
+                {data.accelerometerData.y.toFixed(2)}g
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                <div
+                  className="bg-green-500 h-2 rounded-full transition-all duration-300"
+                  style={{
+                    width: `${Math.min(100, Math.abs(data.accelerometerData.y) * 10)}%`,
+                    marginLeft: data.accelerometerData.y < 0 ? `${100 - Math.min(100, Math.abs(data.accelerometerData.y) * 10)}%` : '0'
+                  }}
+                ></div>
+              </div>
+            </div>
+
+            {/* Z-Axis */}
+            <div className="text-center">
+              <div className="text-sm text-gray-500 mb-1">Z-Axis (Gravity)</div>
+              <div className="text-xl font-bold text-purple-600">
+                {data.accelerometerData.z.toFixed(2)}g
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                <div
+                  className="bg-purple-500 h-2 rounded-full transition-all duration-300"
+                  style={{
+                    width: `${Math.min(100, Math.abs(data.accelerometerData.z) * 10)}%`
+                  }}
+                ></div>
+              </div>
+            </div>
+          </div>
+
+          {/* Motion Status */}
+          <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-600">Motion Status:</span>
+              <span className={`font-medium ${
+                data.fallDetected ? 'text-red-600' :
+                Math.abs(data.accelerometerData.x) > 2 || Math.abs(data.accelerometerData.y) > 2 ? 'text-orange-600' :
+                'text-green-600'
+              }`}>
+                {data.fallDetected ? 'Fall Detected!' :
+                 Math.abs(data.accelerometerData.x) > 2 || Math.abs(data.accelerometerData.y) > 2 ? 'High Movement' :
+                 'Normal Movement'}
+              </span>
+            </div>
+            <div className="flex items-center justify-between text-sm mt-1">
+              <span className="text-gray-600">Total Acceleration:</span>
+              <span className="font-medium">
+                {Math.sqrt(
+                  Math.pow(data.accelerometerData.x, 2) +
+                  Math.pow(data.accelerometerData.y, 2) +
+                  Math.pow(data.accelerometerData.z, 2)
+                ).toFixed(2)}g
+              </span>
             </div>
           </div>
         </div>

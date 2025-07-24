@@ -22,6 +22,14 @@ export function App() {
   const [usageCount, setUsageCount] = useState<number | null>(null);
   const [inhalerBattery, setInhalerBattery] = useState<number | null>(null);
   const [wearableBattery, setWearableBattery] = useState<number | null>(null);
+
+  // Fall detection and emergency state
+  const [fallDetected, setFallDetected] = useState(false);
+  const [accelerometerData, setAccelerometerData] = useState({
+    x: 0,
+    y: 0,
+    z: 9.8 // Normal gravity
+  });
   // State for historical data logs
   const [dataLogs, setDataLogs] = useState<Array<{
     time: string;
@@ -35,6 +43,34 @@ export function App() {
     airQualityThreshold: 80,
     notificationsEnabled: true
   });
+
+  // Emergency contacts
+  const [emergencyContacts, setEmergencyContacts] = useState([
+    {
+      id: '1',
+      name: 'Dr. Sarah Johnson',
+      phone: '+1-555-0123',
+      email: 'dr.johnson@hospital.com',
+      relationship: 'Primary Doctor',
+      priority: 'high' as const
+    },
+    {
+      id: '2',
+      name: 'John Smith',
+      phone: '+1-555-0456',
+      email: 'john.smith@email.com',
+      relationship: 'Emergency Contact',
+      priority: 'high' as const
+    },
+    {
+      id: '3',
+      name: 'Mary Smith',
+      phone: '+1-555-0789',
+      email: 'mary.smith@email.com',
+      relationship: 'Family Member',
+      priority: 'medium' as const
+    }
+  ]);
   // Live data object
   const liveData = {
     heartRate,
@@ -42,7 +78,9 @@ export function App() {
     usageCount,
     connectionStatus: isConnected ? 'Connected' : 'Disconnected',
     inhalerBattery,
-    wearableBattery
+    wearableBattery,
+    fallDetected,
+    accelerometerData
   };
   // Initialize data when connected
   useEffect(() => {
@@ -186,20 +224,127 @@ export function App() {
       if (interval) clearInterval(interval);
     };
   }, [isConnected]);
+  // Simulate MPU6050 accelerometer data and fall detection
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval> | null = null;
+    if (isConnected) {
+      interval = setInterval(() => {
+        // Simulate normal movement with small variations
+        const baseX = Math.sin(Date.now() / 1000) * 0.5; // Gentle movement
+        const baseY = Math.cos(Date.now() / 1500) * 0.3;
+        const baseZ = 9.8 + Math.sin(Date.now() / 2000) * 0.2; // Gravity with small variations
+
+        // Add random noise
+        const x = baseX + (Math.random() - 0.5) * 0.2;
+        const y = baseY + (Math.random() - 0.5) * 0.2;
+        const z = baseZ + (Math.random() - 0.5) * 0.2;
+
+        setAccelerometerData({ x, y, z });
+
+        // Simulate fall detection (5% chance every 30 seconds)
+        if (Math.random() < 0.002) { // Very low chance for demo
+          simulateFall();
+        }
+      }, 100); // Update accelerometer data every 100ms
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isConnected]);
+
+  const simulateFall = () => {
+    // Simulate sudden acceleration change indicating a fall
+    setAccelerometerData({
+      x: (Math.random() - 0.5) * 20, // Sudden movement
+      y: (Math.random() - 0.5) * 20,
+      z: Math.random() * 5 // Reduced Z-axis (falling)
+    });
+
+    setFallDetected(true);
+
+    // Reset fall detection after 10 seconds
+    setTimeout(() => {
+      setFallDetected(false);
+      setAccelerometerData({
+        x: 0,
+        y: 0,
+        z: 9.8
+      });
+    }, 10000);
+  };
+
   // Determine alert status based on thresholds
-  const determineAlertStatus = () => {
+  const determineAlertStatus = (): 'normal' | 'warning' | 'critical' | 'emergency' => {
     if (!isConnected) return 'warning';
+
+    // Emergency status for fall detection
+    if (fallDetected) return 'emergency';
+
+    // Emergency status for severe health issues
+    if (heartRate && heartRate > thresholds.heartRateThreshold + 20) {
+      return 'emergency';
+    }
+    if (airQuality && airQuality < thresholds.airQualityThreshold - 20) {
+      return 'emergency';
+    }
+
+    // Critical status for threshold breaches
     if (heartRate && heartRate > thresholds.heartRateThreshold) {
       return 'critical';
     }
     if (airQuality && airQuality < thresholds.airQualityThreshold) {
       return 'critical';
     }
+
     return 'normal';
   };
   const alertStatus = determineAlertStatus();
   const handleConnect = () => {
     setIsConnected(!isConnected);
+  };
+
+  const handleEmergencyAlert = (alertType: string, data: {
+    timestamp: string;
+    heartRate: number | null;
+    airQuality: number | null;
+    fallDetected?: boolean;
+    accelerometerData?: { x: number; y: number; z: number };
+    location: string;
+  }) => {
+    console.log('Emergency Alert Triggered:', alertType, data);
+
+    // In a real application, this would:
+    // 1. Send SMS/Email to emergency contacts
+    // 2. Call emergency services if configured
+    // 3. Log the emergency event
+    // 4. Trigger push notifications
+    // 5. Update emergency contact dashboard
+
+    // For demo purposes, we'll show a browser notification
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification('RespiraMate Emergency Alert', {
+        body: data.fallDetected
+          ? 'Fall detected! Emergency contacts have been notified.'
+          : 'Critical health emergency detected!',
+        icon: '/favicon.ico',
+        tag: 'emergency'
+      });
+    }
+  };
+
+  // Request notification permission on component mount
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
+
+  // Test fall detection button (for demo purposes)
+  const triggerTestFall = () => {
+    if (isConnected) {
+      simulateFall();
+    }
   };
   // Enhanced correlation between metrics with timer dependency
   useEffect(() => {
@@ -271,18 +416,43 @@ export function App() {
       <main className="container mx-auto px-4 py-6">
         {showHelp && <HelpSection onClose={() => setShowHelp(false)} />}
         <LiveDataSection data={liveData} />
-        <AlertPanel status={alertStatus} thresholds={thresholds} liveData={liveData} />
+        <AlertPanel
+          status={alertStatus}
+          thresholds={thresholds}
+          liveData={liveData}
+          emergencyContacts={emergencyContacts}
+          onEmergencyAlert={handleEmergencyAlert}
+        />
         <div className="flex justify-between items-center mb-4">
-          <div>
-            {isConnected && liveData.inhalerBattery !== null && liveData.wearableBattery !== null && <div className="flex items-center space-x-4 text-sm text-gray-500">
-                  <div>Last synced: {lastSyncTime || 'Never'}</div>
-                </div>}
+          <div className="flex items-center space-x-4">
+            {isConnected && liveData.inhalerBattery !== null && liveData.wearableBattery !== null && (
+              <div className="flex items-center space-x-4 text-sm text-gray-500">
+                <div>Last synced: {lastSyncTime || 'Never'}</div>
+              </div>
+            )}
+            {/* Test Fall Detection Button (Demo) */}
+            {isConnected && (
+              <button
+                onClick={triggerTestFall}
+                className="text-xs bg-orange-500 text-white px-3 py-1 rounded hover:bg-orange-600"
+                title="Simulate fall detection for testing"
+              >
+                Test Fall Detection
+              </button>
+            )}
           </div>
           <button onClick={() => setShowSettings(!showSettings)} className="text-sm text-blue-600 hover:text-blue-800">
             {showSettings ? 'Hide Settings' : 'Show Device Settings'}
           </button>
         </div>
-        {showSettings && <DeviceSettings initialSettings={thresholds} onSettingsChange={setThresholds} />}
+        {showSettings && (
+          <DeviceSettings
+            initialSettings={thresholds}
+            onSettingsChange={setThresholds}
+            emergencyContacts={emergencyContacts}
+            onEmergencyContactsChange={setEmergencyContacts}
+          />
+        )}
         <LogsHistory isConnected={isConnected} logs={dataLogs} />
       </main>
     </div>

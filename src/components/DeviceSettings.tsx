@@ -1,16 +1,34 @@
 import React, { useState } from 'react';
-import { Settings, Save, Moon, Sun, Smartphone } from 'lucide-react';
+import { Settings, Save, Moon, Sun, Plus, Trash2, Phone, Mail, User } from 'lucide-react';
+
+interface EmergencyContact {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+  relationship: string;
+  priority: 'high' | 'medium' | 'low';
+}
+
 interface DeviceSettingsProps {
   initialSettings: {
     heartRateThreshold: number;
     airQualityThreshold: number;
     notificationsEnabled: boolean;
   };
-  onSettingsChange: (settings: any) => void;
+  onSettingsChange: (settings: {
+    heartRateThreshold: number;
+    airQualityThreshold: number;
+    notificationsEnabled: boolean;
+  }) => void;
+  emergencyContacts?: EmergencyContact[];
+  onEmergencyContactsChange?: (contacts: EmergencyContact[]) => void;
 }
 export const DeviceSettings = ({
   initialSettings,
-  onSettingsChange
+  onSettingsChange,
+  emergencyContacts = [],
+  onEmergencyContactsChange
 }: DeviceSettingsProps) => {
   const [settings, setSettings] = useState({
     ...initialSettings,
@@ -18,6 +36,16 @@ export const DeviceSettings = ({
     vibrationAlerts: true,
     soundAlerts: false,
     autoSync: true
+  });
+
+  const [contacts, setContacts] = useState<EmergencyContact[]>(emergencyContacts);
+  const [showAddContact, setShowAddContact] = useState(false);
+  const [newContact, setNewContact] = useState<Partial<EmergencyContact>>({
+    name: '',
+    phone: '',
+    email: '',
+    relationship: '',
+    priority: 'medium'
   });
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const {
@@ -40,8 +68,46 @@ export const DeviceSettings = ({
       airQualityThreshold: Number(settings.airQualityThreshold),
       notificationsEnabled: settings.notificationsEnabled
     });
+    // Update emergency contacts
+    if (onEmergencyContactsChange) {
+      onEmergencyContactsChange(contacts);
+    }
     // In a real app, this would save settings to the device
     console.log('Settings saved:', settings);
+    console.log('Emergency contacts saved:', contacts);
+  };
+
+  const addEmergencyContact = () => {
+    if (newContact.name && newContact.phone) {
+      const contact: EmergencyContact = {
+        id: Date.now().toString(),
+        name: newContact.name,
+        phone: newContact.phone,
+        email: newContact.email || '',
+        relationship: newContact.relationship || '',
+        priority: newContact.priority || 'medium'
+      };
+      setContacts([...contacts, contact]);
+      setNewContact({
+        name: '',
+        phone: '',
+        email: '',
+        relationship: '',
+        priority: 'medium'
+      });
+      setShowAddContact(false);
+    }
+  };
+
+  const removeEmergencyContact = (id: string) => {
+    setContacts(contacts.filter(contact => contact.id !== id));
+  };
+
+  const handleContactChange = (field: keyof EmergencyContact, value: string) => {
+    setNewContact(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
   return <div className="bg-white rounded-lg shadow-md p-4 mb-6">
       <div className="flex items-center mb-4">
@@ -115,6 +181,134 @@ export const DeviceSettings = ({
             </button>
           </div>
         </div>
+
+        {/* Emergency Contacts Section */}
+        <div className="mb-6 pt-6 border-t border-gray-200">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-medium text-gray-700 flex items-center">
+              <User size={16} className="mr-2" />
+              Emergency Contacts
+            </h3>
+            <button
+              type="button"
+              onClick={() => setShowAddContact(!showAddContact)}
+              className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded text-blue-600 bg-blue-100 hover:bg-blue-200"
+            >
+              <Plus size={14} className="mr-1" />
+              Add Contact
+            </button>
+          </div>
+
+          {/* Existing Contacts */}
+          <div className="space-y-3 mb-4">
+            {contacts.map((contact) => (
+              <div key={contact.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div className="flex-1">
+                  <div className="flex items-center space-x-4">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{contact.name}</p>
+                      <p className="text-xs text-gray-500">{contact.relationship}</p>
+                    </div>
+                    <div className="flex items-center space-x-2 text-xs text-gray-600">
+                      <Phone size={12} />
+                      <span>{contact.phone}</span>
+                    </div>
+                    {contact.email && (
+                      <div className="flex items-center space-x-2 text-xs text-gray-600">
+                        <Mail size={12} />
+                        <span>{contact.email}</span>
+                      </div>
+                    )}
+                    <span className={`px-2 py-1 text-xs rounded-full ${
+                      contact.priority === 'high' ? 'bg-red-100 text-red-800' :
+                      contact.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-green-100 text-green-800'
+                    }`}>
+                      {contact.priority}
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => removeEmergencyContact(contact.id)}
+                  className="text-red-600 hover:text-red-800"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            ))}
+            {contacts.length === 0 && (
+              <p className="text-sm text-gray-500 text-center py-4">
+                No emergency contacts configured. Add contacts to receive alerts during emergencies.
+              </p>
+            )}
+          </div>
+
+          {/* Add New Contact Form */}
+          {showAddContact && (
+            <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <h4 className="text-sm font-medium text-blue-800 mb-3">Add Emergency Contact</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                <input
+                  type="text"
+                  placeholder="Full Name"
+                  value={newContact.name || ''}
+                  onChange={(e) => handleContactChange('name', e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                />
+                <input
+                  type="tel"
+                  placeholder="Phone Number"
+                  value={newContact.phone || ''}
+                  onChange={(e) => handleContactChange('phone', e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                />
+                <input
+                  type="email"
+                  placeholder="Email (optional)"
+                  value={newContact.email || ''}
+                  onChange={(e) => handleContactChange('email', e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                />
+                <input
+                  type="text"
+                  placeholder="Relationship"
+                  value={newContact.relationship || ''}
+                  onChange={(e) => handleContactChange('relationship', e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <select
+                  value={newContact.priority || 'medium'}
+                  onChange={(e) => handleContactChange('priority', e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="high">High Priority</option>
+                  <option value="medium">Medium Priority</option>
+                  <option value="low">Low Priority</option>
+                </select>
+                <div className="flex space-x-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddContact(false)}
+                    className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={addEmergencyContact}
+                    className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+                  >
+                    Add Contact
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
         <div className="flex justify-end">
           <button type="submit" className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
             <Save size={16} className="mr-2" />
